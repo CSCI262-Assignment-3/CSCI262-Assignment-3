@@ -4,4 +4,7 @@ version = "0.1.1"
 description = "Assignment for CSCI262, detects possible phishing links."
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "torch>=2.14.1",
+    "transformers>=5.19.0",
+]
