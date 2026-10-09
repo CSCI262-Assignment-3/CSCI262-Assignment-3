@@ -1,6 +1,6 @@
 [project]
-name = "Phishing Prevention Proxy"
-version = "0.1.0"
+name = "Phishing_Prevention_Proxy"
+version = "0.1.1"
 description = "Assignment for CSCI262, detects possible phishing links."
 readme = "README.md"
 requires-python = ">=3.13"
