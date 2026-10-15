@@ -1,6 +1,9 @@
 # Test-related paths
 test/*
 
+# For the mac users
+.DS_Store
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
