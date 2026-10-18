@@ -1,6 +1,9 @@
 # Test-related paths
 test/*
 
+# Model files
+models/*
+
 # For the mac users
 .DS_Store
 

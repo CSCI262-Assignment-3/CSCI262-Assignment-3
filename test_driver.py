@@ -1,8 +1,10 @@
 """Simple test driver for detector.py and logger.py"""
 
+from pathlib import Path
+
 from lib.detector import Detector
 from lib.logger import Logger, URLAccessAttempt
-from pathlib import Path
+from lib.model import phishing_model
 
 # Init the logger
 log_file = Path("./test/logs_text.txt")
@@ -19,7 +21,7 @@ with open(phishing_urls_file, "w") as phishing_file:
     urls = ["sus.com\n", "weenie.live\n", "deez.nutz\n"]
     phishing_file.writelines(urls)
     print("Test phishing URL file created.")
-detector = Detector(phishing_urls_file)
+detector = Detector(phishing_urls_file, phishing_model)
 
 # Testing it out!
 try:
