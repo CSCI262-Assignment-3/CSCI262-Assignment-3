@@ -38,14 +38,11 @@ class Detector:
 
         # Check blacklist first
         if url in self.phishing_urls:
-            print(f"'{url}' is on blacklist.")
             return True
 
         # Check with model
         score: float | None = self.model.score(url)
-        if score and score >= self.threshold:
-            print(f"'{url}' is phishing link with {score:.2f} confidence.")
-            return True
+        if score:
+            return score >= self.threshold
 
-        # Otherwise it's benign
         return False
