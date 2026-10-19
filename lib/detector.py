@@ -33,19 +33,13 @@ class Detector:
     def isKnownPhishingURL(self, url: str) -> bool:
         """Checks URL against known phishing URLs"""
 
-        # Normalise URL first
-        url = self.normalise_URL(url)
-
-        # Check blacklist first
-        if url in self.phishing_urls:
-            print(f"'{url}' is on blacklist.")
+        # Check the normalised URL against the blacklist first
+        if self.normalise_URL(url) in self.phishing_urls:
             return True
 
-        # Check with model
+        # Check with model, scoring the full URL as the model was trained on it
         score: float | None = self.model.score(url)
-        if score and score >= self.threshold:
-            print(f"'{url}' is phishing link with {score:.2f} confidence.")
-            return True
+        if score:
+            return score >= self.threshold
 
-        # Otherwise it's benign
         return False

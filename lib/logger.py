@@ -13,12 +13,13 @@ class URLAccessAttempt:
         _host_name: str = "Unknown",
         _url: str = "Unknown",
         _is_phishing_link: bool = False,
-        _access_time: datetime = datetime.now(TZ),
+        _access_time: datetime | None = None,
     ) -> None:
         self.host_name = _host_name
         self.url = _url
         self.is_phishing_link = _is_phishing_link
-        self.access_time = _access_time
+        # Default to the current time, evaluated per attempt
+        self.access_time = _access_time or datetime.now(TZ)
 
     def __str__(self) -> str:
         formatted_time = self.access_time

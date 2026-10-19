@@ -1,10 +1,11 @@
 [project]
 name = "Phishing_Prevention_Proxy"
-version = "0.1.1"
+version = "1.0.0"
 description = "Assignment for CSCI262, detects possible phishing links."
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "huggingface-hub>=2.2.0",
-    "scikit-learn>=1.7.0",
+  "huggingface-hub>=2.2.0",
+  "mitmproxy>=12.2.3",
+  "scikit-learn>=1.7.0",
 ]
