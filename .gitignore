@@ -229,3 +229,6 @@ __marimo__/
 
 # Proxy runtime output
 logs.txt
+
+# Vagrant VM state
+.vagrant/

@@ -7,7 +7,7 @@ Phishing URLs get a `403` block page instead of being forwarded.
 ## How it works
 
 ```
-browser/curl  ──►  mitmproxy (Docker, port 8080)  ──►  origin server
+browser/curl  ──►  mitmproxy (VM 192.168.56.10, port 8080)  ──►  origin server
                        │
                        ├─ lib/proxy_addon.py   inspects each request
                        ├─ lib/detector.py      blocklist check + ML score
@@ -22,6 +22,14 @@ browser/curl  ──►  mitmproxy (Docker, port 8080)  ──►  origin server
 - **HTTPS (`CONNECT`):** rejected with a `403` explanation — this demo only
   inspects plain HTTP URLs.
 
+## Run the demo in a VM
+
+Install both of these first:
+
+- **VirtualBox:** <https://www.virtualbox.org/wiki/Downloads>
+- **Vagrant:** <https://developer.hashicorp.com/vagrant/install>
+
+Then, from the project folder:
 ## Diagrams
 
 The flow is documented with [PlantUML](https://plantuml.com/) sources in
@@ -43,47 +51,54 @@ plantuml -tpng -Playout=smetana docs/*.puml           # pure-Java fallback
 ## Run the demo with Docker
 
 ```bash
-docker build -t phishing-prevention-proxy .
-docker run --rm -p 8080:8080 phishing-prevention-proxy
+vagrant up
 ```
 
-The ML model is downloaded during the build, so the container needs no network
-at runtime.
+This builds a Debian 12 VirtualBox VM at `192.168.56.10` and runs the proxy on
+port `8080`, starting it automatically whenever the VM boots. The ML model is
+downloaded while the VM is being set up, so the proxy needs no network to load
+it at runtime.
+
+Run `vagrant provision` after changing the code to copy it into the VM,
+`vagrant halt` to stop the VM and `vagrant destroy` to delete it.
 
 ### Test it with curl
 
 ```bash
 # Benign URL -> passes through, real page comes back (200)
-curl -x http://127.0.0.1:8080 http://example.com
+curl -x http://192.168.56.10:8080 http://example.com
 
 # Blocklisted URL -> 403 block page
-curl -x http://127.0.0.1:8080 http://sus.com/
+curl -x http://192.168.56.10:8080 http://sus.com/
 
 # ML-flagged URL -> 403 block page
-curl -x http://127.0.0.1:8080 http://clubedemilhagem.com/home.php
+curl -x http://192.168.56.10:8080 http://clubedemilhagem.com/home.php
 
 # HTTPS is not inspected -> CONNECT tunnel refused
-curl -x http://127.0.0.1:8080 https://example.com
+curl -x http://192.168.56.10:8080 https://example.com
 ```
+
+On Windows, use `curl.exe` so PowerShell doesn't run its own `curl` alias.
 
 ### Test it with a browser
 
-1. Start the container (see above).
+1. Start the VM (see above).
 2. In Firefox: Settings → General → Network Settings →
-   Manual proxy configuration → HTTP Proxy `127.0.0.1`, port `8080`.
+   Manual proxy configuration → HTTP Proxy `192.168.56.10`, port `8080`.
 3. Visit `http://sus.com` (blocked) or `http://example.com` (loads normally).
 
 ### Logs
 
-Every access attempt is recorded in `logs.txt` (inside the container at
-`/app/logs.txt`):
+Every access attempt is recorded in `logs.txt` (inside the VM at
+`/opt/proxy/logs.txt`):
 
 ```
 [!!!] [2026-10-19 01:11:59+11:00]: 'sus.com' accessed 'http://sus.com/'
 [...] [2026-10-19 01:11:46+11:00]: 'example.com' accessed 'http://example.com/'
 ```
 
-Run `docker logs phishing-proxy-demo` to watch requests as they happen.
+Run `vagrant ssh -c "tail -f /opt/proxy/logs.txt"` to watch requests as they
+happen.
 
 ## Configuration
 
@@ -96,7 +111,7 @@ Run `docker logs phishing-proxy-demo` to watch requests as they happen.
 ```bash
 uv sync
 uv run python test_driver.py     # try the detector interactively
-uv run mitmdump -s lib/proxy_addon.py   # run the proxy without Docker
+uv run mitmdump -s lib/proxy_addon.py   # run the proxy without the VM
 ```
 
 ## Limitations
