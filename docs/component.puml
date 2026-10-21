@@ -1,0 +1,54 @@
+@startuml
+title Phishing Prevention Proxy - Components
+
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam rectangleBackgroundColor #F7F7F7
+skinparam rectangleBorderColor #666666
+skinparam ArrowFontSize 11
+
+actor "Client\n(browser / curl)" as Client
+cloud "Origin Server" as Origin
+
+node "Docker container\nphishing-prevention-proxy" {
+  component "mitmproxy\nmitmdump --listen-port 8080" as Proxy
+  component "proxy_addon.py\nPhishingBlocker" as Addon
+  component "detector.py\nDetector" as Detector
+  component "model.py\nMLDetector" as Model
+  component "logger.py\nLogger" as Logger
+}
+
+folder "data/" as Data {
+  file "phishing_urls.txt\n(blocklist)" as Blocklist
+}
+
+folder "models/pirocheto/\nphishing-url-detection" as Models {
+  file "model.pkl\n(scikit-learn LinearSVM)" as Pkl
+}
+
+file "logs.txt\n(access log)" as Logs
+
+Client --> Proxy : HTTP request (or CONNECT)
+Proxy --> Addon : request(flow)\nhttp_connect(flow)
+Addon --> Detector : isKnownPhishingURL(url)
+Detector --> Blocklist : reads blocklist at startup
+Detector --> Model : score(url) when not blocklisted
+Model --> Pkl : joblib.load (lazy)
+Addon --> Logger : log(URLAccessAttempt)
+Logger --> Logs : appends access attempt
+Proxy --> Origin : forwarded request (benign only)
+Origin --> Proxy : response
+Proxy --> Client : response, or 403 block page
+
+note right of Models
+  Model is downloaded during
+  the Docker build, so the
+  container runs offline.
+end note
+
+note right of Blocklist
+  One URL per line,
+  scheme stripped.
+end note
+
+@enduml
