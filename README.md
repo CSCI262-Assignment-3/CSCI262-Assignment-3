@@ -22,6 +22,24 @@ browser/curl  ──►  mitmproxy (Docker, port 8080)  ──►  origin server
 - **HTTPS (`CONNECT`):** rejected with a `403` explanation — this demo only
   inspects plain HTTP URLs.
 
+## Diagrams
+
+The flow is documented with [PlantUML](https://plantuml.com/) sources in
+`docs/`, with rendered images next to them.
+
+| Diagram | Source | Image |
+| --- | --- | --- |
+| Request flow (activity diagram) | [`docs/flow.puml`](docs/flow.puml) | ![Request flow](docs/flow.png) |
+| Request sequence | [`docs/sequence.puml`](docs/sequence.puml) | ![Request sequence](docs/sequence.png) |
+| Components | [`docs/component.puml`](docs/component.puml) | ![Components](docs/component.png) |
+
+Regenerate the images after editing a `.puml` file:
+
+```bash
+plantuml -tpng docs/*.puml                            # needs Graphviz for layout
+plantuml -tpng -Playout=smetana docs/*.puml           # pure-Java fallback
+```
+
 ## Run the demo with Docker
 
 ```bash

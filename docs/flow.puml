@@ -1,0 +1,63 @@
+@startuml
+title Phishing Prevention Proxy - Request Flow
+
+skinparam shadowing false
+skinparam conditionStyle diamond
+skinparam ActivityFontSize 12
+skinparam ArrowFontSize 11
+
+|Client|
+start
+:HTTP request sent to mitmproxy on port 8080;
+
+|mitmproxy / proxy_addon|
+if (Request is CONNECT (HTTPS)?) then (yes)
+  :http_connect() answers 403 "HTTPS is not inspected"; <<#FFE0E0>>
+  :403 page returned to client;
+  note right
+    Only plain HTTP URLs
+    are inspected.
+  end note
+  stop
+else (no)
+endif
+
+:request(flow) hook runs;
+
+|detector / model|
+partition "Detector.isKnownPhishingURL(url)" {
+  :normalise_URL(url)\nlower, strip scheme, strip "www.", strip trailing "/";
+  if (Normalised URL in blocklist?) then (yes)
+    :verdict = PHISHING\n(blocklist hit); <<#FFCCCC>>
+  else (no)
+    partition "MLDetector.score(url)" {
+      if (Model loaded?) then (yes)
+        :Phishing probability p\n(result cached per URL);
+        if (p >= threshold 0.9?) then (yes)
+          :verdict = PHISHING\n(ML score above threshold); <<#FFCCCC>>
+        else (no)
+          :verdict = BENIGN; <<#ccffcc>>
+        endif
+      else (no)
+        :score = None\nverdict = BENIGN; <<#FFF0CC>>
+      endif
+    }
+  endif
+}
+
+|logger|
+:Logger.log(URLAccessAttempt(host, url, is_phishing))\nappends a line to logs.txt;
+
+|mitmproxy / proxy_addon|
+if (verdict = PHISHING?) then (yes)
+  :flow.response = http.Response.make(403, BLOCK_PAGE); <<#FFCCCC>>
+  :403 block page sent to client, request never forwarded;
+  stop
+else (no)
+  :flow.response left unset; <<#ccffcc>>
+  :mitmproxy forwards the request to the origin server;
+  :Origin server response relayed back to the client;
+  stop
+endif
+
+@enduml

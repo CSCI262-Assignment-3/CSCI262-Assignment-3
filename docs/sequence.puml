@@ -1,0 +1,74 @@
+@startuml
+title Phishing Prevention Proxy - Request Sequence
+
+skinparam shadowing false
+skinparam sequence {
+  ArrowColor #444444
+  LifeLineBorderColor #666666
+  ParticipantBorderColor #666666
+  ParticipantBackgroundColor #F7F7F7
+  ActorBorderColor #666666
+  ActorBackgroundColor #F7F7F7
+}
+autonumber
+
+actor "Client\n(browser / curl)" as Client
+participant "mitmproxy\n(Docker :8080)" as Proxy
+participant "proxy_addon.py\nPhishingBlocker" as Addon
+participant "detector.py\nDetector" as Detector
+database "blocklist\ndata/phishing_urls.txt" as Blocklist
+participant "model.py\nMLDetector\n(LinearSVM)" as Model
+participant "logger.py\nLogger" as Logger
+participant "Origin\nServer" as Origin
+
+== HTTPS request (CONNECT) ==
+
+Client -> Proxy: CONNECT example.com:443
+Proxy -> Addon: http_connect(flow)
+Addon --> Proxy: flow.response = 403\n"HTTPS is not inspected"
+Proxy --> Client: 403 HTTPS page
+
+== HTTP request, benign URL ==
+
+Client -> Proxy: GET http://example.com
+Proxy -> Addon: request(flow)
+Addon -> Detector: isKnownPhishingURL(url)
+Detector -> Blocklist: normalise_URL(url) in list?
+Blocklist --> Detector: no
+Detector -> Model: score(url)
+Model --> Detector: 0.02 (cached per URL)
+Detector --> Addon: False
+Addon -> Logger: log(URLAccessAttempt(host, url, False))
+Logger -> Logger: append "[...] ... : 'host' accessed 'url'"
+Addon --> Proxy: flow.response = None (forward)
+Proxy -> Origin: GET / (forwarded)
+Origin --> Proxy: 200 OK + body
+Proxy --> Client: 200 OK + body
+
+== HTTP request, blocklisted URL ==
+
+Client -> Proxy: GET http://sus.com/
+Proxy -> Addon: request(flow)
+Addon -> Detector: isKnownPhishingURL(url)
+Detector -> Blocklist: normalise_URL(url) in list?
+Blocklist --> Detector: yes
+Detector --> Addon: True
+Addon -> Logger: log(URLAccessAttempt(host, url, True))
+Addon --> Proxy: flow.response = 403 BLOCK_PAGE
+Proxy --> Client: 403 "This site has been blocked"
+
+== HTTP request, ML-flagged URL ==
+
+Client -> Proxy: GET http://clubedemilhagem.com/home.php
+Proxy -> Addon: request(flow)
+Addon -> Detector: isKnownPhishingURL(url)
+Detector -> Blocklist: normalise_URL(url) in list?
+Blocklist --> Detector: no
+Detector -> Model: score(url)
+Model --> Detector: 0.97 (>= threshold 0.9)
+Detector --> Addon: True
+Addon -> Logger: log(URLAccessAttempt(host, url, True))
+Addon --> Proxy: flow.response = 403 BLOCK_PAGE
+Proxy --> Client: 403 "This site has been blocked"
+
+@enduml
